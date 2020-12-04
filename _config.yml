@@ -5,7 +5,7 @@ header-img: img/home-bg.jpeg
 email: hankemay@163.com
 description: "Summarize the practice and share knowldege in the big data area"
 keyword: "寒柯, Hanke, hanke, @hankemay, Scala, Spark, Flink, Hadoop, Airflow, IT, 大数据, 数据处理"
-url: "https://hanke.github.io/"              # your host, for absolute URL
+url: "https://hankemay.github.io/"              # your host, for absolute URL
 baseurl: ""                             # for example, '/blog' if your blog hosted on 'host/blog'
 
 # Publish posts or collection documents with a future date.

@@ -3,12 +3,12 @@
     "title": "Hanke's Blog",
     "author": "Hanke <hankemay@163.com",
     "version": "1.8.2",
-    "homepage": "https://hanke.github.io",
+    "homepage": "https://hankemay.github.io",
     "repository": {
         "type": "git",
-        "url": "https://hanke.github.io"
+        "url": "https://hankemay.github.io"
     },
-    "bugs": "https://hanke.github.io/issues",
+    "bugs": "https://hankemay.github.io/issues",
     "devDependencies": {
         "grunt": "^1.1.0",
         "grunt-banner": "~0.2.3",

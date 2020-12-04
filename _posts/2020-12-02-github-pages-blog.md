@@ -65,4 +65,4 @@ bundle exec jekyll serve
 
 -----
 
-Want to see something else added? <a href="https://hanke.github.io/">Open an issue.</a>
+Want to see something else added? <a href="https://hankemay.github.io/">Open an issue.</a>
