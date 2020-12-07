@@ -138,5 +138,37 @@ total 40
 -rw-r--r--  1 hmxiao  FREEWHEELMEDIA\Domain Users    46B Dec  7 12:34 5.delta
 ```
 
+### How to Use the Checkpoint
+[Checkpoint on S3](https://cm.engineering/using-hdfs-to-store-spark-streaming-application-checkpoints-2146c1960d30)
 
+[Checkpoint on Mounted EFS](https://blog.yuvalitzchakov.com/improving-spark-streaming-checkpoint-performance-with-aws-efs/)
+
+[Customized Solution](https://www.qubole.com/blog/structured-streaming-with-direct-write-checkpointing/)
+
+#### Our Solution
+`HDFS + Backup on S3 + Sync latest Checkpoint when Re-Provision a Cluster`
+Refer to the solution in [here](https://cm.engineering/using-hdfs-to-store-spark-streaming-application-checkpoints-2146c1960d30)
+
+```shell
+#1) Put the checkpoint in HDFS
+noAggDF
+.writeStream
+.format("parquet")
+.option("chgeckpointLocation", "hdfs://checkpoint_dir")
+
+#2) Copy checkpoints from HDFS to local disk
+hdfs dfs -copyToLocal hdfs:///[checkpoint_dir] /tmp/[checkpoint-dir]
+
+#3) Copy from local disk to S3 (to avoid using the cluster's computing resources)
+aws s3 cp --recursive /tmp/[checkpoint-dir] s3://[destination-path]
+
+#4) When to switch the cluster, sync the latest checkpoint to the new cluster
+```
+
+### Reference
++ Change which can't be recovered from the checkpoint [Guide][1]
++ [Production][2] on Databricks  
+
+[1]: https://docs.databricks.com/spark/latest/structured-streaming/production.html#recover-after-changes-in-a-streaming-query
+[2]: https://docs.databricks.com/spark/latest/structured-streaming/production.html
 
