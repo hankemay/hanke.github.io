@@ -47,14 +47,7 @@ Refer to the [page](https://docs.databricks.com/spark/latest/structured-streamin
     + **Arbitrary stateful operation**: For example, `sdf.groupByKey(...).mapGroupsWithState(...)` or `sdf.groupByKey(...).flatMapGroupsWithState(...)`. Any change to the schema of the user-defined state and the type of timeout is not allowed. Any change within the user-defined state-mapping function are allowed, but the semantic effect of the change depends on the user-defined logic. If you really want to support state schema changes, then you can explicitly encode/decode your complex state data structures into bytes using an encoding/decoding scheme that supports schema migration. For example, if you save your state as Avro-encoded bytes, then you are free to change the Avro-state-schema between query restarts as the binary state will always be restored successfully.
 
 **Notes**
-From [Page](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#additional-information)
-+ Several configurations are not modifiable after the query has run. <font color="red"><b>To change them, discard the checkpoint and start a new query</b></font>. These configurations include:
-    + <font color="red"><b>spark.sql.shuffle.partitions</b></font>
-        + This is due to the physical partitioning of state: state is partitioned via applying hash function to key, hence the number of partitions for state should be unchanged.
-        + If you want to run fewer tasks for stateful operations, coalesce would help with avoiding unnecessary repartitioning.
-            + After coalesce, the number of (reduced) tasks will be kept unless another shuffle happens.
-    + **spark.sql.streaming.stateStore.providerClass**: To read the previous state of the query properly, the class of state store provider should be unchanged.
-    + **spark.sql.streaming.multipleWatermarkPolicy**: Modification of this would lead inconsistent watermark value when query contains multiple watermarks, hence the policy should be unchanged.
+from [page](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#additional-information)
 
 ### Local Env Checkpoint Exmaple
 On Spark3  
