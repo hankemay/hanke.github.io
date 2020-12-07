@@ -4,7 +4,7 @@ title: "Spark StreamingQueryListener"
 subtitle: "Customized Spark Streaming Query Listener Implementation"
 author: "Hanke"
 header-style: text
-tags: [Spark, Scala, Streaming]
+tags: [Spark, Scala, Spark Structured Streaming]
 ---
 
 This blog will explain the spark streaming query listener interface, and how to implement one customized listener for steaming cases. What's more, how to call it in the streaming job.
