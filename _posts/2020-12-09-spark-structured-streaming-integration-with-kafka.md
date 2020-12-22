@@ -21,3 +21,14 @@ Some data may have been lost because they are not available in Kafka any more; e
 ```bash
 org.apache.hadoop.fs.FileAlreadyExistsException: Rename destination file:/Users/hmxiao/workspace/kafka/kafka_2.13-2.6.0/output/.metadata.crc already exists.
 ```
+Above error is caused by restarting the stream job later, and the offset is far away from current kafka beginning offset.
+
+
+#### Kafka Consumer Setting
+```bash
+WARN InternalKafkaConsumerPool: Pool exceeds its soft max size, cleaning up idle objects...
+```
+**Solution**
+`spark.kafka.consumer.cache.capacity` default is 64 in [Spark](https://spark.apache.org/docs/latest/structured-streaming-kafka-integration.html#consumer-caching).  
+
+In the demo poc case, we have the 128 partitions in topic, better to set a larger cache capacity for it.
