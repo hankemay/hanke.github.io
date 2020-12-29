@@ -171,8 +171,45 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
 * 当一个特质仅用于混入一个或者几个特质时，可以指定自身类型来进行限制
 * 简单的依赖注入？可以用来表达组件和组件之间的依赖关系
 
-
 Self-type [参考文章](https://www.colabug.com/2016/0317/666838/)
+
+### ClassTag
+Scala 官方文档对于ClassTag的定义如下:
+> `ClassTag[T]`保存着在运行时被JVM擦除的类型T的信息。当我们在运行时想获得被实例化的Array的类型信息的时候, 这个特性会比较好用.
+
+```scala
+/**
+ *
+ * A `ClassTag[T]` stores the erased class of a given type `T`, accessible via the `runtimeClass`
+ * field. This is particularly useful for instantiating `Array`s whose element types are unknown
+ * at compile time.
+ *
+ * `ClassTag`s are a weaker special case of [[scala.reflect.api.TypeTags#TypeTag]]s, in that they
+ * wrap only the runtime class of a given type, whereas a `TypeTag` contains all static type
+ * information. That is, `ClassTag`s are constructed from knowing only the top-level class of a
+ * type, without necessarily knowing all of its argument types. This runtime information is enough
+ * for runtime `Array` creation.
+ * For example:
+**/
+  scala> def mkArray[T : ClassTag](elems: T*) = Array[T](elems: _*)
+  mkArray: [T](elems: T*)(implicit evidence\$1: scala.reflect.ClassTag[T])Array[T]
+ 
+  scala> mkArray(42, 13)
+  res0: Array[Int] = Array(42, 13)
+ 
+  scala> mkArray("Japan","Brazil","Germany")
+  res1: Array[String] = Array(Japan, Brazil, Germany)
+```
+
+**Code in Spark for RDD**
+```scala
+abstract class RDD[T: ClassTag](
+    @transient private var _sc: SparkContext,
+    @transient private var deps: Seq[Dependency[_]]
+  ) extends Serializable with Logging {
+```
+ 
+
 
 
 
