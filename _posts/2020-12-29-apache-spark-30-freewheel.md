@@ -8,82 +8,82 @@ header-style: "text"
 tags: [Spark]
 ---
 ## 引言
-相信作为Spark的粉丝或者平时工作跟Spark相关的同学大多知道，Spark 3.0在2020年6月官方重磅发布，并于9月发布稳定线上版本，这是Spark有史以来最大的一次release，共包含了3400多个patches，而且恰逢Spark发布的第十年，具有非常重大的意义。  
+相信作为Spark的粉丝或者平时工作与Spark相关的同学大多知道，Spark 3.0在2020年6月官方重磅发布，并于9月发布稳定线上版本，这是Spark有史以来最大的一次release，共包含了3400多个patches，而且恰逢Spark发布的第十年，具有非常重大的意义。  
 
-我们团队在Spark发布后，快速自己搭好Spark 3.0的裸机集群并在其上进行了初步的调研，发现相较于Spark 2.x 确实有性能上的提升。于是跟AWS EMR和Support团队进行了多次沟通表达我们的迫切需求后，EMR团队给予了快速的响应，在11月底发布了内测版本。作为第一批内测用户，我们做了Data Pipelines上各个模块的升级，测试和数据验证。团队通过高效的敏捷开发赶在2020年圣诞广告季之前在生产环境顺利发布上线，整体**性能提升高达40%**（对于大batch）的数据，**AWS Cost平均节省25%~30%之间**，大约每年在使用至少能为公司节省一百多万人民币(约16万美元)。目前线上稳定运行，借助此次升级能够更从容为Freewheel高速增长业务量和数据分析需求保驾护航。  
+团队在Spark发布后，快速动手搭好Spark 3.0的裸机集群并在其上进行了初步的调研，发现相较于Spark 2.x 确实有性能上的提升。于是跟AWS EMR和Support团队进行了多次沟通表达我们的迫切需求后，EMR团队给予了快速的响应，在11月底发布了内测版本。作为第一批内测用户，我们做了Data Pipelines上各个模块的升级，测试和数据验证。团队通过高效的敏捷开发赶在2020年圣诞广告季之前在生产环境顺利发布上线，整体**性能提升高达40%**（对于大batch）的数据，**AWS Cost平均节省25%~30%之间**，大约每年至少能为公司节省一百多万人民币(约16万美元)。目前线上稳定运行，预期借助此次升级能够更从容为Freewheel高速增长业务量和数据分析需求保驾护航。  
 
-在这次Spark 3.0的升级中，其实并不是一个简简单单的版本更换，因为团队的数据Pipelines所依赖的生态圈本质上其实也发生了一个很大的变化。比如EMR有一个大版本的升级，从5.20升级到最新版6.2.0， 底层的Hadoop也升级到3，Scala只能支持2.12等等。本篇文章主要是和大家分享一下Spark 3.0在Freewheel大数据团队升级背后的故(血)事(泪)和相关的实战经验，希望能对大家以后的使用Spark 3.0特别是基于AWS EMR上开发有所帮助，可以在Spark升级的道路上走的更顺一些。
+在这次Spark 3.0的升级中，其实并不是一个简简单单的版本更换，因为团队的Data Pipelines所依赖的生态圈本质上其实也发生了一个很大的变化。比如EMR有一个大版本的升级，从5.20升级到最新版6.2.0， 底层的Hadoop也从2.x升级到3.2.1，Scala只能支持2.12等等。本篇文章主要是想和大家分享一下Spark 3.0在Freewheel大数据团队升级背后的故(血)事(泪)和相关的实战经验，希望能对大家以后的使用Spark 3.0特别是基于AWS EMR上开发有所帮助，可以在Spark升级的道路上走的更顺一些。
 
 ## 团队介绍
 Freewheel核心业务数据团队的主要工作是通过收集，分析来自用户的视频广告数据，来帮助客户更好地制定广告计划，满足客户不断增长的业务需求，最终帮助客户实现业务的增长。其中最主要的两类数据分别是预测数据和历史数据:
-* **预测数据**会根据用户历史广告投放情况进行算法分析和学习来得到未来预测情况，在此基础上向客户提供有价值的数据分析结果，比如广告投放是否健康，广告位是否足够，当前的广告售卖是否合理等等信息。通过这些数据分析的反馈可以帮助用户更好地在广告定价、售期等方面做正确的决定，最终达到自己的销售目标。
-* **历史数据**主要是提供用户业务场景数据分析所需要的功能，比如数据查询，Billing账单，广告投放情况，市场策略等, 并且通过大量的历史数据从多维度多指标的角度提供强有力的BI分析能力去帮助用户洞察数据发生的变化，发现潜在的问题和市场机会。  
+* **预测数据**会根据用户历史广告投放情况进行算法分析和学习来得到未来预测情况，在此基础上向客户提供有价值的数据分析结果，比如广告投放是否健康，广告位是否足够，当前的广告售卖是否合理等等信息。通过这些数据分析的反馈可以帮助用户更好地在广告定价、售期等方面做出正确的决定，最终达到自己的销售目标。
+* **历史数据**主要是提供用户业务场景数据分析所需要的功能，比如数据查询，Billing账单，广告投放情况，市场策略等，并且通过大量的历史数据从多维度多指标的角度提供强有力的BI分析能力进而帮助用户洞察数据发生的变化，发现潜在的问题和市场机会。  
 
 作为核心业务数据团队里重要的成员，**Transformer**团队的主要负责:
 * **基于大数据平台技术建立Data Pipelines**
-    * 负责将交易级别的数据转化为分析级别的数据服务下游所有的数据产品
+    * 负责将交易级别的数据转化为分析级别的数据，服务下游所有的数据产品
 * **构建统一的数据仓库**
-    * 通过分层业务模型来构建所有数据产品不同场景下（历史或者预测）使用的一致的业务视图和指标
+    * 通过分层业务模型来构建所有数据产品不同场景下（历史或者预测）使用一致的业务视图和指标
     * 提供不同粒度或者维度的聚合事实数据
     * 提供基于特定场景的数据集市
 * **提供统一的数据发布服务和接口**
 
-### 数据建模和Pipelines架构
-当交易级别的广告数据（历史或者预测）数据进入系统后，会通过数据建模和Pipelines进行统一的建模或者分析，视业务需要更进一步构建数据集市，生成的聚合事实数据会被发布到数据仓库Hive和Clickhouse里供下游所有的数据产品通过Presto或者Clickhouse查询引擎来消费。如下是整体建模和Pipelines的架构图：
+### 数据建模和Data Pipelines架构
+当交易级别的广告（历史或者预测）数据进入系统后，会通过数据建模和Data Pipelines进行统一的建模或者分析，视业务需要更进一步构建数据集市，生成的聚合事实数据会被发布到数据仓库Hive和Clickhouse里供下游数据产品通过Presto或者Clickhouse查询引擎来消费。如下是整体建模和Data Pipelines的架构图：
 ![Team Intro](/img/team-intro.png)
 
 其中主要模块包括：
 * **Optimus**  
-    * 正如它的名字一样，`Optimus`同样是Transformer团队的模块中的领袖人物，肩负业务数据团队最重要的数据建模部分。通过分层数据建模的方式来构建统一的基于的上下文数据模型，保障所有下游产品在不同的应用和业务场景下的计算指标，计算逻辑一致。比如预测数据和历史数据同样的指标含义，就使得提供给客户的数据对比更有说服力和决策指导意义。目前它会产生将近四十张左右的小时粒度的历史事实表和预测事实表。目前每天处理的数据在TB级别，会根据每个小时的数据量自动进行扩或者缩集群，保证任务的高性能同时达到资源的高效利用目标。
+    * 正如它的名字一样，`Optimus`同样是Transformer团队的模块中的领袖人物，肩负业务数据团队最重要的数据建模部分。通过分层数据建模的方式来构建统一的基于上下文的数据模型，保障所有下游产品在不同的应用和业务场景下的计算指标，计算逻辑一致，且避免来回重复计算扫描数据。比如预测数据和历史数据同样的指标含义，就使得提供给客户的数据对比更有说服力和决策指导意义。目前它会产生将近四十张左右的小时粒度的历史事实表和预测事实表。目前每天处理的数据在TB级别，会根据每个小时的数据量自动进行扩或者缩集群，保证任务的高性能同时达到资源的高效利用目标。
 * **JetFire**  
-    * `JetFire`是一个基于Spark的通用ETL框架，支持用户通过SQL或者Code的方式灵活的定制ETL任务处理和分析数据。目前主要用于Post-Optimus的场景，生成基于特定业务场景更高聚合粒度的数据集市上。比如生成`todate`(迄今为止)的统计指标，比如每个客户截止到目前或者过去18个月的广告投放总数。这样就可以避免每次查询对底层数据或者Optimus生成的聚合数据进行全扫。生成一次供多次查询，可以极大提高查询效率，降低成本。
+    * `JetFire`是一个基于Spark的通用ETL框架，支持用户通过SQL或者Code的方式灵活的定制ETL任务和分析数据任务。目前主要用于Post-Optimus的场景，生成基于特定业务场景更高聚合粒度的数据集市上。比如生成`todate`(迄今为止)的统计指标，像每个客户截止到目前或者过去18个月的广告投放总数。这样就可以避免每次查询对底层数据或者Optimus生成的聚合数据进行全扫。生成一次供多次查询，可以极大提高查询效率，降低成本。
 * **New Publisher**
     * 基于Spark的数据发布模块，负责将数据发布到数据仓库里。由于数据建模产生的数据按日期进行分区，当存在Late Data的时候，很容易生成碎小文件，Publisher通过发布数据前合并碎小文件的功能来提升下游的查询效率。
 * **Bumblebee**
-    * 主要是为数据建模和Pipelines的各个模块提供模块测试和集成测试环境，供业务开发的同学使用。此外，基于此提供所有数据Pipelines的整体一致CD和灾备方案，保障在极端场景下系统的快速启动和恢复。 
+    * 主要是为数据建模和Data Pipelines的各个模块提供模块测试和集成测试环境，供业务开发的同学使用。此外，基于此提供所有Data Pipelines的整体一致的CD和灾备方案，保障在极端场景下系统的快速启动和恢复。 
 * **Data Restatement**
-    * 除了日常的数据Pipelines，在客户数据投放出现问题或者数据仓库数据出现偏差遗漏时，需要自动的修数据Pipelines来支持大范围的数据修正和补偿。整体的作业调度需要保证日常工作正常完成的情况下，尽快完成数据修正工作。目前提供整个batch或者delta两种方式修数据，来满足不同的应用场景。
+    * 除了日常的Data Pipelines，在客户数据投放出现问题或者数据仓库数据出现偏差遗漏时，需要自动修数据的Pipelines来支持大范围的数据修正和补偿。整体的作业调度需要保证日常工作正常完成的情况下，尽快完成数据修正工作。目前提供整个batch或者delta两种方式修数据，来满足不同的应用场景。
 * **Transformer API**
     * 负责为下游提供数据发布信息，来触发一些订阅的报表或者产品发布。  
 
-除了Transformer API服务部署在EKS上，其他相关模块目前都运行在AWS EMR上， 灵活使用Spot Instance和On Demand混合模式。团队基于以上的模块为公司的业务发展提供有力的数据和技术保障。
+除了Transformer API服务部署在EKS上，其他相关模块目前都运行在AWS EMR上， 灵活使用Spot Instance和On Demand混合模式，高效利用资源。团队基于以上的模块为公司的业务发展提供有力的数据和技术保障。
 
 ## 实践成果
 这次升级主要的实践成果如下：
 ### 性能提升明显
-* **历史数据**Pipeline对于大batch的数据（300~400G/每小时）性能`提升高达40%`， 对于小batch（小于100G/每小时）提升效果没有大batch提升的那么明显，每天所有batches`平均提升水平27.5%`左右。
-* **预测数据**性能提升平均`30%` 
-    * 由于输入源不一样，目前是分别两个pipeline在跑历史和预测数据，产生的表的数目也不太一样，因此做了分别的评估。  
+* **历史数据**Pipeline对于大batch的数据（200~400G/每小时）性能`提升高达40%`， 对于小batch（小于100G/每小时）提升效果没有大batch提升的那么明显，每天所有batches`平均提升水平27.5%`左右。
+* **预测数据**性能`平均提升30%` 
+    * 由于数据输入源不一样，目前是分别两个pipeline在跑历史和预测数据，产生的表的数目也不太一样，因此做了分别的评估。  
 
-以历史数据上线后的端到端到运行时间为例（如下图）, 肉眼可见整体pipeline的运行时间有了明显的下降，能够更快的输出数据供下游使用。  
+以历史数据上线后的端到端到运行时间为例（如下图）, 肉眼可见上线后整体pipeline的运行时间有了明显的下降，能够更快的输出数据供下游使用。  
 ![runtime](/img/runtime.png)
 
 ### 集群内存使用降低
-集群内存使用对于大batch达`30%`左右，每天平均`平均节省25%`左右。  
-以历史数据上线后的运行时集群的memory在ganglia上的截图为例（如下图）, 整体集群的内存使用从41.2T降到30.1T，这意味着我们可以用更少的机器花更少的钱来跑同样的Spark任务。  
+集群内存使用对于大batch达`降低30%`左右，每天平均`平均节省25%`左右。  
+以历史数据上线后的运行时集群的memory在ganglia上的截图为例（如下图），整体集群的内存使用从41.2T降到30.1T，这意味着我们可以用更少的机器花更少的钱来跑同样的Spark任务。  
 ![memory](/img/spark-3-memory.png)
 
 ### AWS Cost降低
-Pipelines做了自动的Scale In/Scale Out, 在需要资源的时候扩集群的task结点，在任务结束后自动去缩集群的task结点，且会根据每次batch数据的大小通过算法学习得到最佳的机器数。通过升级到Spark 3.0后，由于现在任务跑的更快并且需要的机器更少，上线后统计AWS Cost每天节省`30%`左右，大约一年能为公司`节省一百多万人民币`（约160K美元）。  
+Pipelines做了自动的Scale In/Scale Out策略: 在需要资源的时候扩集群的task结点，在任务结束后自动去缩集群的task结点，且会根据每次batch数据的大小通过算法学习得到最佳的机器数。通过升级到Spark 3.0后，由于现在任务跑的更快并且需要的机器更少，上线后统计AWS Cost每天`节省30%`左右，大约一年能为公司`节省一百多万人民币`（约160K美元）。  
 
-如下是历史数据Pipeline上线后，通过AWS Billing得到的Cost数据， 可能看到使用Spot Instance情况下从每天平均1700美元降到稳定的1200美元左右， 如果使用AWS On Demand的Instance的话节省就更可观了。
+如下是历史数据Pipeline上线后，通过AWS Billing得到的账单Cost数据， 可以看到在使用Spot Instance情况下(花费柱状图较短的情况下)从每天平均1700美元降到稳定的1200美元左右， 如果使用AWS On Demand的Instance的话那么节省就更可观了。
 ![aws-cost](/img/spark-3-aws-cost.jpg)
 
 ### 其他
-* 数据Pipelines里的所有的相关模块都完成了Spark 3.0的升级，享受最新技术栈和优化带来的收益。
+* Data Pipelines里的所有的相关模块都完成了Spark 3.0的升级，享受最新技术栈和优化带来的收益。
 * 由于任务运行时间和需要的机器数明显下降，整体的Spot Instance被中断的概率也大大降低，任务稳定性得到加强。
 * 发布了自动化数据验证工具进行端到端的数据验证。
 * 统一并升级了所有模块的CD Pipelines。
 
 
-在我们具体看具体做了什么并且背后有什么魔法在起作用之前，先和大家一起简单回顾一下Spark 3.0这次发布里的关键新特性。
+在我们看具体做了什么，背后有什么魔法帮助达到**即让任务跑的快又能为公司省钱的效果**之前，先和大家一起简单回顾一下Spark 3.0这次发布里的关键新特性。
 
 ## Spark 3.0 关键新特性回顾
 从Spark 3.0官方的[Release Notes][1]可以看到，这次大版本的升级主要是集中在性能优化和文档丰富上(如下图)，其中46%的优化都集中在Spark SQL上。  
 <img src="/img/spark3-0.png" width="70%" height="70%">
 
-今天Spark SQL的优化不仅仅服务于SQL语言，还服务于机器学习、流计算和DataFrame等计算任务， 因此社区对于Spark SQL的投入非常大。对外公布的TPC-DS性能测试结果相较于Spark 2.4会有**2倍**的提升。SQL优化里最引人注意的非[`Adaptive Query Execution`][2]莫属了， 还有一些其他的优化比如[Dynamic Pruning Partition][3]，通过Aggregator注册[UDAF][4](User Define Aggregator Function)等等都极大的提升了SQL引擎的性能。  
-本文会着重回顾AQE新特性及相关关注的特性和文档监控方面的变化。其他更多的信息比如复用子查询优化，SQL Hints，ANSI SQL兼容，SparkR向量化读写，加速器感知GPU调度等等，感兴趣的同学可以参考官网[notes][1].  
+今天Spark SQL的优化不仅仅服务于SQL语言，还服务于机器学习、流计算和DataFrame等计算任务， 因此社区对于Spark SQL的投入非常大。对外公布的TPC-DS性能测试结果相较于Spark 2.4会有**2倍**的提升。SQL优化里最引人注意的非[`Adaptive Query Execution`][2]莫属了， 还有一些其他的优化比如[Dynamic Pruning Partition][3]，通过Aggregator注册[UDAF][4](User Defined Aggregator Function)等等都极大的提升了SQL引擎的性能。  
+本文会着重回顾AQE新特性及相关关注的特性和文档监控方面的变化。其他更多的信息比如复用子查询优化，SQL Hints，ANSI SQL兼容，SparkR向量化读写，加速器感知GPU调度等等，感兴趣的同学可以参考官网[notes][1]。 
 
 ### Adaptive Query Execution (AQE)
 AQE对于整体的Spark SQL的执行过程做了相应的调整和优化(如下图)，它最大的亮点是可以根据已经完成的计划结点`真实且精确的执行统计结果`来不停的`反馈并重新优化`剩下的执行计划。
@@ -91,28 +91,27 @@ AQE对于整体的Spark SQL的执行过程做了相应的调整和优化(如下�
 ![AQE](/img/AQE.gif)
 Spark 2.x的SQL执行过程:
 * 当用户提交了Spark SQL/Dataset/DataFrame时，在逻辑执行计划阶段，Spark SQL的Parser会用ANLTER将其转化为对应的语法树（Unresolved Logic Plan)，接着Analyzer会利用catalog里的信息找到表和数据类型及对应的列将其转化为解析后有schema的Logical Plan，然后Optimizer会通过一系列的优化rule进行算子下推（比如filter， 列剪裁)，提前计算常量（比如当前时间），replace一些操作符等等来去优化Logical Plan。  
-* 而在物理计划阶段，Spark Planner会将各种物理计划策略作用于对应的Logical Plan节点上，生成多个物理计划，然后通过CBO选择一个最佳的作为最终的物理算子树(比如选择用Broadcast的算子，而不是SortMerge的Join算子)， 最终将算子树的节点转化为Spark底层的RDD,Transformation和Action等，以支持其提交执行。 
-在Spark 3.0之前， Spark的Catalyst的优化主要是通过基于逻辑计划的rule和物理计划里的[CBO][5]，这些优化要么基于数据库里的`静态`信息，要么通过预先得到统计信息， 比如数值分布的直方图等来`预估`并判断应该使用哪种优化策略。这样的优化存在很多问题，比如数据的meta信息不准确或者不全，或者复杂的filter，黑盒的UDFs等导致无法预估正确的数据量，因此很难得到较优的优化策略。  
+* 而在物理计划阶段，Spark Planner会将各种物理计划策略作用于对应的Logical Plan节点上，生成多个物理计划，然后通过CBO选择一个最佳的作为最终的物理算子树(比如选择用Broadcast的算子，而不是SortMerge的Join算子)， 最终将算子树的节点转化为Spark底层的RDD，Transformation和Action等，以支持其提交执行。 
+在Spark 3.0之前， Spark的Catalyst的优化主要是通过基于逻辑计划的rule和物理计划里的[CBO][5]，这些优化要么基于数据库里的`静态`信息，要么通过预先得到统计信息， 比如数值分布的直方图等来`预估`并判断应该使用哪种优化策略。这样的优化存在很多问题，比如数据的meta信息不准确或者不全，或者复杂的filter，黑盒的UDFs等导致无法预估准确的数值，因此很难得到较优的优化策略。  
 
 **主要功能点**  
 此时，提出AQE通过`真实且精确的执行统计结果`进行优化就很有意义了。基于这个设计和背景，AQE就能够比较方便解决用户在使用Spark中一些头疼的地方。主要体现在以下三个方面：
 * **自动调整reducer的数量，减小partition数量**  
-    * Spark任务的并行度一直是让用户比较困扰的地方。如果并行度太大的话，会导致task 过多，overhead比较大，整体拉慢任务的运行。而如果并行度太小的，数据分区会比较大，容易出现OOM的问题，并且资源也得不到合理的利用。而且由于Spark Context整个任务的并行度，需要一开始设定好且没法动态修改，这就很容易出现任务刚开始的时候数据量大需要大的并行度，而运行的过程中通过转化过滤可能最终的数据集已经变得很小，最初设定的分区数就过大了。AQE能够很好的解决这个问题，在reducer去读取数据时，会根据用户设定的分区数据的大小(`spark.sql.adaptive.advisoryPartitionSizeInBytes`)来自动调整和合并(`Coalesce`)小的partition, 自适应地减小partition的数量，以减少资源浪费和overhead，提升任务的性能。参考示例图:
+    * Spark任务的并行度一直是让用户比较困扰的地方。如果并行度太大的话，会导致task 过多，overhead比较大，整体拉慢任务的运行。而如果并行度太小的，数据分区会比较大，容易出现OOM的问题，并且资源也得不到合理的利用，并行运行任务优势得不到最大的发挥。而且由于Spark Context整个任务的并行度，需要一开始设定好且没法动态修改，这就很容易出现任务刚开始的时候数据量大需要大的并行度，而运行的过程中通过转化过滤可能最终的数据集已经变得很小，最初设定的分区数就显得过大了。AQE能够很好的解决这个问题，在reducer去读取数据时，会根据用户设定的分区数据的大小(`spark.sql.adaptive.advisoryPartitionSizeInBytes`)来自动调整和合并(`Coalesce`)小的partition，自适应地减小partition的数量，以减少资源浪费和overhead，提升任务的性能。参考示例图中可以看到从最开始的shuffle产生50个partitions，最终合并为只有5个parititons:
 ![AQE](/img/AQE-Coalesce.png)
 
 * **自动解决Join时的数据倾斜问题**  
-    * Join里如果出现某个key的数据倾斜问题，那么基于上就是这个任务的性能杀手了。在AQE之前，用户没法自动处理Join中遇到的这个棘手问题，需要借助外部手动收集数据统计信息，并做额外的加盐，分批处理数据等相对繁琐的方法来应对数据倾斜问题。而AQE由于可以实时拿到运行时的数据，通过`Skew Shuffle Reader`自动调整不同key的数据大小(`spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes`)来避免数据倾斜，从而提高性能。参考示例图:
+    * Join里如果出现某个key的数据倾斜问题，那么基于上就是这个任务的性能杀手了。在AQE之前，用户没法自动处理Join中遇到的这个棘手问题，需要借助外部手动收集数据统计信息，并做额外的加盐，分批处理数据等相对繁琐的方法来应对数据倾斜问题。而AQE由于可以实时拿到运行时的数据，通过`Skew Shuffle Reader`自动调整不同key的数据大小(`spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes`)来避免数据倾斜，从而提高性能。参考示例图可以看到AQE自动将A表里倾斜的partition进一步划分为3个小的partitions跟B表对应的partition进行join，消除短板倾斜任务:
 ![AQE](/img/AQE-DataSkew.png)
-/img/shuffle2.png
 * **优化Join策略**
     * AQE可以在Join的初始阶段获悉数据的输入特性，并基于此选择适合的Join算法从而最大化地优化性能。比如从Cost比较高的SortMerge在不超过阈值的情况下调整为代价较小的Broadcast Join。参考示例图:
 ![AQE](/img/AQE-JoinSwitch.png)
 
 ### Dynamic Pruning Partition(DPP)
-DPP主要解决的是对于星型模型的查询场景中过滤条件无法下推的情况。通过DPP可以将小表过滤后的数据作为新的过滤条件下推到另一个大表里，从而可以做到对大表scan运行阶段的提前过滤掉不必要的partition读取。这样也可以避免引入不必要的额外ETL过程（提前生成另外过滤后的大表），在查询的过程中极大的提升查询性能， 感兴趣的同学可以更进一点阅读[DPP][3]的详细信息。
+DPP主要解决的是对于星型模型的查询场景中过滤条件无法下推的情况。通过DPP可以将小表过滤后的数据作为新的过滤条件下推到另一个大表里，从而可以做到对大表scan运行阶段的提前过滤掉不必要的partition读取。这样也可以避免引入不必要的额外ETL过程（例如预先ETL生成新的过滤后的大表），在查询的过程中极大的提升查询性能， 感兴趣的同学可以更进一步阅读[DPP][3]的详细信息。
 
 ### 通过Aggragtor注册UDAF 
-通过用户定制实现的Aggregator来注册实现UDAF，可以避免对每一行的数据反复进行序列化和反序列化来进行聚合，而只需在整个分区里序列化一次, ，缓解了对CPU的压力, 提升性能。假如一个DataFrame有100万行数据共10个paritions，那么旧的UDAF方式的序列化反序列化需要至少100万+10(合并分区里的结果)次。
+新特性通过用户定制实现的Aggregator来注册实现UDAF，可以避免对每一行的数据反复进行序列化和反序列化来进行聚合，而只需在整个分区里序列化一次 ，缓解了对CPU的压力， 提升性能。假如一个DataFrame有100万行数据共10个paritions，那么旧的UDAF方式的序列化反序列化需要至少100万+10次(合并分区里的结果)。
 ![UDAF](/img/UDAF.png)
 而新的函数只需要10次即可，大大减少整体的序列化操作。其中实现部分最主要的区别体现在UDAF的`update`函数部分：
 ```scala
@@ -131,7 +130,7 @@ def update(agg: AggregatorType, input: Row): AggregatorType = {
 更多技术细节部分可以阅读[Aggregator 注册UDAF](UDAF)。
 
 ### 文档与监控
-Spark 3.0完善和丰富了很多文档及监控信息，来辅助大家更好的进行调优和监控任务的性能。  
+Spark 3.0完善和丰富了很多文档及监控信息，来辅助大家更好的进行调优和监控任务的性能动态。  
 
 #### Spark SQL 和 Web UI文档
 增加了[Spark SQL语法][6]、[SQL配置的文档页面][7] 和相关[WebUI的文档][8]。
@@ -141,11 +140,11 @@ Spark 3.0引入了更多可观察的指标来去观测数据的运行质量。Sh
 <img src="/img/shuffle2.png" width="70%" height="70%">
 
 #### 新的Structured Streaming UI 
-作为社区主推的Spark实时的模块Structured Streaming是在Spark 2.0中发布的，这次在Spark 3.0中正式加入了UI的配置。新的UI主要包括了两种统计信息，已完成的Streaming查询聚合的信息和正在进行的Streaming查询的当前信息， 具体包括Input Rate, Process Rate,Input Rows, Batch Duration和Operate Duration，可以辅助用户更进一步观察任务的负载和运行能力。
+作为社区主推的Spark实时的模块Structured Streaming是在Spark 2.0中发布的，这次在Spark 3.0中正式加入了UI的配置。新的UI主要包括了两种统计信息，已完成的Streaming查询聚合的信息和正在进行的Streaming查询的当前信息， 具体包括Input Rate、 Process Rate、Input Rows、 Batch Duration和Operate Duration，可以辅助用户更进一步观察任务的负载和运行能力。
 ![Structured Streaming UI](/img/webui-structured-streaming-detail.png)
 
 #### 支持event logs的滚动
-Spark 3.0提供了类似Log4j那样对于长时间运行的日志按照时间或者文件的大小进行切割，这样特别是对于streaming长期运行的任务来说比较友好。不然Spark历史服务器打开一个动辄几十GB大小的event log， 打开的速度可想而知。当然，对行Spark的event log不能像其他普通的应用程序日志那样，简单粗暴的进行切割，而是需要保证Spark的历史服务器依赖能够解析已经滚动或者压缩后的日志，并能在Spark UI中展示出来，方便用户进行后续的调优和排查问题操作。具体的细节可进一步阅读相关[ticket][9]。
+Spark 3.0提供了类似Log4j那样对于长时间运行的日志按照时间或者文件的大小进行切割，这样对于streaming长期运行的任务来说比较友好。不然Spark历史服务器打开一个动辄几十GB大小的event log， 打开的速度可想而知。当然，对于Spark的event log不能像其他普通的应用程序日志那样，简单粗暴的进行切割，而是需要保证Spark的历史服务器依赖能够解析已经滚动或者压缩后的日志，并能在Spark UI中展示出来，方便用户进行后续的调优和排查问题操作。具体的细节可进一步阅读相关[ticket][9]。
 
 ### 生态圈建设
 扩展相关生态圏版本的升级和建设
@@ -155,10 +154,10 @@ Spark 3.0提供了类似Log4j那样对于长时间运行的日志按照时间或
 
 
 ## 我们做了什么？遇到什么坑？
-数据Pipelines和相关的回归测试框架都进行依赖生态圈的统一升级，接下来会跟大家详细分享细节部分。
+Data Pipelines和相关的回归测试框架都进行相关依赖生态圈的统一升级，接下来会跟大家详细分享细节部分。
 
 ### Spark升级到最新稳定版3.0.1
-Spark `3.0.1`是社区推荐使用的新的稳定版本，于2020年九月正式发布，其中解决了3.0版本里的一些bug。
+Spark `3.0.1`是社区目前推荐使用的最新的稳定版本，于2020年九月正式发布，其中解决了3.0版本里的一些潜在bug。
 
 #### 主要的改动
 * **打开Spark 3.0 AQE的新特性**  
@@ -169,7 +168,11 @@ Spark `3.0.1`是社区推荐使用的新的稳定版本，于2020年九月正式
     "spark.sql.adaptive.coalescePartitions.minPartitionNum": 1,
     "spark.sql.adaptive.advisoryPartitionSizeInBytes": "128MB"
 ```
-> 需要注意的是，AQE特性只是在reducer阶段不用指定reducer的个数，但**并不代表你不再需要指定任务的并行度了**。因为map阶段仍然需要将数据划分为合适的分区进行处理，如果没有指定并行度会使用默认的200， 当数据量过大时，很出现OOM。建议还是按照任务之前的并行度设置来配置参数`spark.sql.shuffle.partitions`和`spark.default.parallelism`。
+> 需要注意的是，AQE特性只是在reducer阶段不用指定reducer的个数，但**并不代表你不再需要指定任务的并行度了**。因为map阶段仍然需要将数据划分为合适的分区进行处理，如果没有指定并行度会使用默认的200， 当数据量过大时，很容易出现OOM。建议还是按照任务之前的并行度设置来配置参数`spark.sql.shuffle.partitions`和`spark.default.parallelism`。
+
+* **升级HyperLogLog相关的UDAF到新接口**  
+UDAF部分由于代码较长，这里不再赘述了。具体实现可以参考[文档][4]和本文中[介绍](#通过aggragtor注册udaf)， 测试显示相关使用UDAF的表的性能有`11%左右的提升`。
+
 
 * **依赖Hadoop版本升级**  
 依赖的Hadoop根据Spark和EMR支持的版本升级到`3.2.1`
@@ -188,14 +191,14 @@ compile group: "org.apache.hadoop", name: "hadoop-client", version: "${hadoopVer
 
 #### 遇到的坑
 * **读Parquet文件失败**  
-升级到Spark 3.0后，读源数据Parquet文件会出现一些莫名的问题，有些文件可以正常解析，而有些文件则会抛出失败的异常错误，这个错误是整个升级的Blocker。
+升级到Spark 3.0后，读源数据Parquet文件会出现一些莫名的问题，有些文件可以正常解析，而有些文件则会抛出失败的异常错误，这个错误是整个升级的Blocker，非常令人苦恼。
     * **具体的错误信息**
 ```scala
 org.apache.spark.sql.execution.QueryExecutionException: Encounter error while reading parquet files. One possible cause: Parquet column cannot be converted in the corresponding files.
 ```
     * **原因**
-        * 在仔细调试和阅读代码后发现，Spark 3.0在Parquet的嵌套schema的逻辑上做了修改，主要是使用的优化特性`spark.sql.optimizer.nestedSchemaPruning.enabled`， 具体可以进一步阅读相关的[ticket][11]。
-        * 而产生的影响就是当在有嵌套schema的parquet文件上去读取不存在的field时，会抛出错误。而在2.4以前的版本是，是允许访问不存的field并返回none。    
+        * 在仔细调试和阅读源码后发现，Spark 3.0在Parquet的嵌套schema的逻辑上做了修改，主要是关于使用的优化特性`spark.sql.optimizer.nestedSchemaPruning.enabled`时的变化， 具体可以进一步阅读相关的[ticket][11]。
+        * 而产生的影响就是当在有嵌套schema的Parquet文件上去读取不存在的field时，会抛出错误。而在2.4以前的版本是，是允许访问不存在的field并返回none，并不会中断整个程序。    
 
     * **解决办法**  
         * 由于我们数据建模和上游开发模式就是面向接口编程，为了不和schema严格绑定，是会存在提前读取一些暂时还没有上线的field并暂时存放空值。因此，新的逻辑修改直接就break了原来的开发模式， 而且代码里也要重新加入各种兼容老的schema逻辑。
@@ -203,7 +206,7 @@ org.apache.spark.sql.execution.QueryExecutionException: Encounter error while re
         * 鉴于上面的影响太大和性能测试结果，最终选择设置`spark.sql.optimizer.nestedSchemaPruning.enabled = false`。后续会进一步研究是否有更优雅的解决方式。  
 
 * **History Server的Connection Refused**  
-Spark 3.0里History Server在解析日志文件由于内存问题失败时, History Server会重启，随后会出现`Connection Refused`的错误信息，而2.x里，并不会导致整个History Server的重启。  
+Spark 3.0里History Server在解析日志文件由于内存问题失败时， History Server会重启，随后会出现`Connection Refused`的错误信息，而2.x里，并不会导致整个History Server的重启。  
     * **解决方案**  
 增加History Server的内存。   
         * 在Master结点, Spark配置文件里修改：
@@ -214,30 +217,34 @@ export SPARK_DAEMON_MEMORY=12g
 
 * **History UI显示任务无法结束**  
     * **原因**
-        * 打开AQE后由于分对整个查询进行再次切分，加上3.0也会增加很多相关Observable的指标，比如Shuffle，所以整体的History Logs会变的相对较大， 目前对于某些batch的任务产生的logs无法及时同步到History Server里，导致从History UI去看任务执行进度时会存在一直在`in progress`状态，但实际上任务已经执行完毕。 
-        * 在阅读源码和相关Log后，比较怀疑是Spark driver在`eventLoggingListerner`往升级后的HDFS(Hadoop `3.2.1`)写eventlogs时出了什么问题，比如丢了对应事件结束的通知信息。由于源码里这部分的debugging相关Log信息相对有限，还不能完全确定根本原因，后续会再继续跟进这个问题。
+        * 打开AQE后由于会对整个查询进行再次切分，加上3.0也会增加很多相关Observable的指标，比如Shuffle，所以整体的History Logs会变的相对较大， 目前对于某些batch的任务产生的logs无法及时同步到History Server里，导致从History UI去看任务执行进度时会存在一直在`in progress`状态，但实际上任务已经执行完毕。 
+        * 在阅读源码和相关Log后，比较怀疑是Spark Driver在`eventLoggingListerner`向升级后的HDFS(Hadoop `3.2.1`)写eventlogs时出了什么问题，比如丢了对应事件结束的通知信息。由于源码里这部分debugging相关的Log信息相对有限，还不能完全确定根本原因，后续会再继续跟进这个问题。
 > 其实类似的问题在Spark 2.4也偶有发生，但升级到3.0后似乎问题变得频率高了一些。遇到类似问题的同学可以注意一下，虽然Logs信息不全，但**任务的执行和最终产生的数据都是正确的**。
+
+* **HDFS升级后端口发生变化**  
+HDFS访问的端口号从``变为``
+
 
 ### EMR升级到最新版6.2.0
 * **系统升级**  
-EMR 6.2.0使用的操作系统是更好`Amazon Linux2`, 整体系统的服务安装和控制从直接调用各个服务自己的起停命令(原有的操作系统版本过低)更换为统一的`Systemd`。
+EMR 6.2.0使用的操作系统是更好`Amazon Linux2`，整体系统的服务安装和控制从直接调用各个服务自己的起停命令(原有的操作系统版本过低)更换为统一的`Systemd`。
 
 * **启用Yarn的结点标签**  
-在EMR的6.x的发布里，禁用了yarn的结点标签功能，相较于原来driver强制只能跑在core结点上，新的EMR里driver可以跑在做任意结点, 细节可以参考[文档][13]。  
-而由于我们的数据Pipelines需要EMR的task节点按需进行扩或者缩，而且用的还是Spot Instance。因此这种场景下driver更适合跑在常驻的(On Demand)的core结点上，而不是随时面临收回的task节点上。对应的EMR集群改动：
+在EMR的6.x的发布里，禁用了Yarn的结点标签功能，相较于原来Driver强制只能跑在Core结点上，新的EMR里Driver可以跑在做任意结点, 细节可以参考[文档][13]。  
+而由于我们的Data Pipelines需要EMR的Task节点按需进行扩或者缩，而且用的还是Spot Instance。因此这种场景下Driver更适合跑在常驻的(On Demand)的Core结点上，而不是随时面临收回的Task节点上。对应的EMR集群改动：
 ```scala
 yarn.node-labels.enabled: true
 yarn.node-labels.am.default-node-label-expression: 'CORE'
 ```
 
 * **Spark Submit 命令的修改**  
-在EMR新的版本里用extraJavaOptions会报错，这个和EMR内部的设置有关系，具体详情可以参考[EMR配置][10]  
+在EMR新的版本里用extraJavaOptions会报错，这个和EMR内部的设置有关系，具体详情可以参考[EMR配置][10] ，修改如下:     
 `spark.executor.extraJavaOptions=-XX` --> `spark.executor.defaultJavaOptions=-XX:+UseG1GC`
 
 #### 遇到的坑
 * **Hive Metastore冲突**  
     * **原因**  
-EMR 6.2.0里内置的Hive Metastore版本是`2.3.7`，而我们内部系统使用的目前版本是`1.2.1`，因此在使用新版EMR的时候会报莫名的各种包问题，根本原因就是使用的Metastore版本冲突问题。  
+EMR 6.2.0里内置的Hive Metastore版本是`2.3.7`，而公司内部系统使用的目前版本是`1.2.1`，因此在使用新版EMR的时候会报莫名的各种包问题，根本原因就是使用的Metastore版本冲突问题。  
     * **错误信息示例**：
 ```scala
 User class threw exception: java.lang.RuntimeException: [download failed: net.minidev#accessors-smart;1.2!accessors-smart.jar(bundle), download failed: org.ow2.asm#asm;5.0.4!asm.jar, download failed: org.apache.kerby#kerb-core;1.0.1!kerb-core.jar, download failed: org.apache.kerby#kerb-server;1.0.1!kerb-server.jar, download failed: org.apache.htrace#htrace-core4;4.1.0-incubating!htrace-core4.jar, download failed: com.fasterxml.jackson.core#jackson-databind;2.7.8!jackson-databind.jar(bundle), download failed: com.fasterxml.jackson.core#jackson-core;2.7.8!jackson-core.jar(bundle), download failed: javax.xml.bind#jaxb-api;2.2.11!jaxb-api.jar, download failed: org.eclipse.jetty#jetty-util;9.3.19.v20170502!jetty-util.jar, download failed: com.google.inject#guice;4.0!guice.jar, download failed: com.sun.jersey#jersey-server;1.19!jersey-server.jar]
@@ -260,9 +267,9 @@ User class threw exception: java.lang.RuntimeException: [download failed: net.mi
 Caused by: org.apache.thrift.TApplicationException: Required field 'client_protocol' is unset! Struct:TOpenSessionReq(client_protocol:null, configuration:{set:hiveconf:hive.server2.thrift.resultset.default.fetch.size=1000, use:database=default})
 ```
     * **原因**
-        * 和Hive metastore包冲突类似的问题，由于Spark 3.0 里用的hive-jdbc.jar包版本过高    
+        * 和Hive metastore包冲突类似的问题，由于Spark 3.0 里用的hive-jdbc.jar包版本过高。   
     * **解决方案**
-        * 下载可用的对应的lib包，将Spark 3.0里自带的hive-jdbc.jar包进行替换    
+        * 下载可用的对应的lib包，将Spark 3.0里自带的hive-jdbc.jar包进行替换。    
 ```scala
 wget -P ./ https://github.com/timveil/hive-jdbc-uber-jar/releases/download/v1.8-2.6.3/hive-jdbc-uber-2.6.3.0-235.jar
 ```
@@ -288,10 +295,10 @@ Data Node Log:
 dfs.datanode.max.transfer.threads = 16384
 ```
 
-    * 不确定是否EMR集群在升级的过程中将是否修改过HDFS连接数的默认参数。
+    * 不确定是否EMR集群在升级的过程中是否修改过HDFS连接数的默认参数。
 
 ### Scala 升级到 2.12 
-由于Spark 3.0不再支持Scala 2.11版本，需要所有的代码升级到2.12的版本。更多Scala 2.12的新的发布内容可以参考[文档][14]
+由于Spark 3.0不再支持Scala 2.11版本，需要将所有的代码升级到2.12的版本。更多Scala 2.12的新的发布内容可以参考[文档][14]。  
 * **语法升级**
     * `JavaConversions`被deprecated了，需要用`JavaConverters`并且显示调用`.asJava`或者`.asScala`的转化 
     * 并发接口发生变化`Scala.concurrent.Future` 
@@ -300,30 +307,30 @@ dfs.datanode.max.transfer.threads = 16384
 
 ### 其他相关调整
 * **集群资源分配算法调整**    
-整体需要的集群内存在升级3.0后有明显的降低，数据Pipelines根据新的资源使用重新调整了根据文件大小计算集群资源大小的算法
+整体w使用的集群内存在升级3.0后有明显的降低，Data Pipelines根据新的资源需用量重新调整了根据文件大小计算集群资源大小的算法。  
 * **Python升级到3.x** 
 
 ## 为什么既能提升性能又能省钱？
 我们来仔细看一下为什么升级到3.0以后可以减少运行时间，又能节省集群的成本。
 以Optimus数据建模里的一张表的运行情况为例：
 * 在reduce阶段从没有AQE的`40320`个tasks锐减到`4580`个tasks，减少了一个数量级。
-    * 上面是没有AQE的Spark 2.x的task情况，下面是打开AQE特性后的Spark 3.x的情况。
+    * 下图里上部分是没有AQE的Spark 2.x的task情况，下部分是打开AQE特性后的Spark 3.x的情况。
 ![tasks](/img/spark-3-aqe-compare.png)
-* 从更详细的运行时间图来看， shuffler reader后同样的aggregate的操作等时间也从`4.44h`到`2.56`h，节省将近一半。
+* 从更详细的运行时间图来看， shuffler reader后同样的aggregate的操作等时间也从`4.44h`到`2.56h`，节省将近一半。
     * 左边是spark 2.x的运行指标明细，右边是打开AQE后通过custom shuffler reader后的运行指标情况。
 ![tasks](/img/spark-3-aqe-compare2.png)
 
 **原因分析**：
-* 由上面单张表可以看到，打开AQE的时候极大的降低了task的数量，除了减轻了driver的负担，也减少启动task带来的schedule，memory， 启动管理等overhead，减少cpu的占用，提升的I/O性能。
-* 拿历史数据Pipelines为例，同时会并行有三十多张表在Spark里运行，每张表都有极大的性能提升，那么也使得其他的表能够获得资源更早更多，互相收益，那么最终整个的数据建模过程会自然而然有一个加速的[结果](#性能提升明显)。
+* 由上面单张表可以看到，打开AQE的时候极大的降低了task的数量，除了减轻了Driver的负担，也减少启动task带来的schedule，memory， 启动管理等overhead，减少cpu的占用，提升的I/O性能。
+* 拿历史Data Pipelines为例，同时会并行有三十多张表在Spark里运行，每张表都有极大的性能提升，那么也使得其他的表能够获得资源更早更多，互相受益，那么最终整个的数据建模过程会自然而然有一个加速的[结果](#性能提升明显)。
     * 大batch（>200G）相对小batch(<100G)有比较大的提升，有高达40%提升，主要是因为大batch本身数据量大，需要机器数多，设置并发度也更大，那么AQE展现特性的时刻会更多更明显。而小batch并发度相对较低，那么提升也就相对会少一些，不过也是有27.5%左右的加速。
-* 数据Pipelines里端到端的每个模块都升级Spark 3.0，充分获得新技术栈带来的好处。
-* 内存方面除了因为AQE的打开，减少过碎的task对于memory的占用外，Spark 3.0也在其他地方做了很多内存方面的优化，比如Aggregate部分指标瘦身（[Ticket][15]），Netty的共享内存Pool功能([Ticket][16]) , Task Manager死锁问题([Ticket][17])，避免某些场景下从网络读取shuffle block([Ticket][18])等等，来减少内存的压力。一系列内存的优化加上AQE特性叠加从[前文](#集群内存使用降低)的图中可以看到集群的内存使用同时有`30%`左右的下降。
+* Data Pipelines里端到端的每个模块都升级到Spark 3.0，充分获得新技术栈带来的好处。
+* 内存方面除了因为AQE的打开，减少过碎的task对于memory的占用外，Spark 3.0也在其他地方做了很多内存方面的优化，比如Aggregate部分指标瘦身（[Ticket][15]）、Netty的共享内存Pool功能([Ticket][16])、Task Manager死锁问题([Ticket][17])、避免某些场景下从网络读取shuffle block([Ticket][18])等等，来减少内存的压力。一系列内存的优化加上AQE特性叠加从[前文](#集群内存使用降低)的图中可以看到集群的内存使用同时有`30%`左右的下降。
 
-综上所述，`Spark任务得到端到端的加速 + 集群资源使用降低 = 性能提升又省钱`。
+综上所述，`Spark任务得到端到端的加速 + 集群资源使用降低 = 提升性能且省钱`。
 
 ## 未来展望
-接下来，团队会继续紧跟技术栈的更新，并持续对数据Pipelines上做代码层次和技术栈方面的调优和贡献，另外会引入更多的监控指标来更好的解决业务建模中可能出现的数据倾斜问题，以更强力的技术支撑和保障Freewheel正在蓬勃发展的业务。
+接下来，团队会继续紧跟技术栈的更新，并持续对Data Pipelines上做代码层次和技术栈方面的调优和贡献，另外会引入更多的监控指标来更好的解决业务建模中可能出现的数据倾斜问题，以更强力的技术支持和保障Freewheel正在蓬勃发展的业务。
 
 最后特别感谢AWS EMR和Support团队在升级的过程中给予的快速响应和支持。
 
