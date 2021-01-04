@@ -75,7 +75,7 @@ Pipelines做了自动的Scale In/Scale Out策略: 在需要资源的时候扩集
 * 发布了自动化数据验证工具进行端到端的数据验证。
 * 统一并升级了所有模块的CD Pipelines。
 
-接下来我们具体看看我们做了什么，又踩了什么样的坑，以及背后有什么魔法帮助达到**即让任务跑的快又能为公司省钱的效果**。对Spark 3.0新特性感兴趣的同学可以参考我的另外一篇关于[Spark 3.0的新特性回顾][19]。
+接下来我们具体看看我们做了什么，又踩了什么样的坑，以及背后有什么魔法帮助达到**即让任务跑的快又能为公司省钱的效果**。对Spark 3.0新特性感兴趣的同学可以参考我的另外一篇关于[Spark 3.0的关键新特性回顾][19]。
 
 ## 我们做了什么？遇到什么坑？
 Data Pipelines和相关的回归测试框架都进行相关依赖生态圈的统一升级，接下来会跟大家详细分享细节部分。
@@ -109,7 +109,7 @@ ext {
 compile group: "org.apache.hadoop", name: "hadoop-client", version: "${hadoopVersion}"
 ```
 * **打开History Server Event Logs回滚功能**  
-Spark 3.0提供了类似Log4j那样对于长时间运行的日志按照时间或者文件的大小进行切割，这样对于Streaming长期运行的任务和比较大任务来说比较友好。
+Spark 3.0提供了类似Log4j那样对于长时间运行的日志按照时间或者文件的大小进行切割，这样对于Streaming长期运行的任务和大任务来说比较友好。
 ```scala
     "spark.eventLog.rolling.enabled": true,
     "spark.eventLog.rolling.maxFileSize": "1024m",
