@@ -131,6 +131,8 @@ object WordCount {
 ## HDFS
 ### HDFS的架构与工作机制
 
+### HDFS的HA
+
 ## Yarn
 ### Yarn的架构与工作机制
 

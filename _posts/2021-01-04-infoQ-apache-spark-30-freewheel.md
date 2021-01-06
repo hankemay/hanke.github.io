@@ -66,7 +66,7 @@ FreeWheel核心业务数据团队的主要工作是通过收集，分析来自�
 ### AWS Cost降低
 Pipelines做了自动的Scale In/Scale Out策略: 在需要资源的时候扩集群的Task结点，在任务结束后自动去缩集群的Task结点，且会根据每次batch数据的大小通过算法学习得到最佳的机器数。通过升级到Spark 3.0后，由于现在任务跑的更快并且需要的机器更少，上线后统计AWS Cost每天`节省30%`左右，一年能为公司`百万成本`。  
 
-如下是历史数据Pipeline上线后，通过AWS Billing得到的账单Cost数据，可以看到在使用Spot Instance情况下(花费柱状图较短的情况下)从每天平均1700美元降到稳定的1200美元左右， 如果使用AWS On Demand的Instance的话那么节省就更可观了。
+如下是历史数据Pipeline上线后，通过AWS Billing得到的账单Cost数据，可以看到在使用 Spot Instance 情况下(花费柱状图较短的情况下)从上线前(蓝色线)到上线后(红色线)每天有显著的30%左右的成本下降，如果使用AWS On Demand的Instance的话那么节省就更可观了。
 ![aws-cost](/img/spark3/spark-3-aws-cost.jpg)
 
 ### 其他
