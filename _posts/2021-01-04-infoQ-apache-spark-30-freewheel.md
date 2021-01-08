@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "InfoQ--揭秘Apache Spark 3.0 新特性在FreeWheel核心业务数据团队的应用与实战"
-subtitle: "新特性"
+subtitle: "最佳实践"
 date: 2021-01-04
 author: "Hanke"
 header-style: "text"
