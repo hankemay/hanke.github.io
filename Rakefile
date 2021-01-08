@@ -43,6 +43,10 @@ task :post do
     #post.puts "header-img: \"img/post-bg-2015.jpg\""
     post.puts "tags: []"
     post.puts "---"
+    post.puts "<b><font color=\"red\">本网站的文章除非特别声明，全部都是原创。
+原创文章版权归数据元素</font>(</b>[DataElement](https://www.dataelement.top)<b><font color=\"red\">)所有，未经许可不得转载!</font></b>  "
+    post.puts "**了解更多大数据相关分享，可关注微信公众号\"`数据元素`\"**"
+    post.puts "![数据元素微信公众号](/img/dataelement.gif)"
   end
 end # task :post
 
