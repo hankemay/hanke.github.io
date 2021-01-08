@@ -112,7 +112,7 @@ object WordCount {
 
 ### Spark是如何来解决这些问题的？
 #### 提供丰富的操作符和分层的DAG并发处理层
-* 通过抽象数据结构RDD和丰富的操作符来提升用户的操作体验。
+* 通过抽象数据结构RDD和[丰富的操作符][2]来提升用户的操作体验。
     * 除了Map, Reduce，还提供了filter(), join(), cogroup(), flatMap(), union(), distinct()等等用户常用的操作符， 可参考Reference里Spark的transformation文档。
 
 * 会将用户的代码分为**逻辑处理层**和**物理执行层**。
@@ -130,13 +130,21 @@ object WordCount {
 
 ## HDFS
 ### HDFS的架构与工作机制
-
+官方[HDFS设计文档][3]。
 ### HDFS的HA
+讲解详细的一篇文章[HDFS的HA机制][4]
 
 ## Yarn
 ### Yarn的架构与工作机制
 
 ### Reference
-* [Hadoop文档](https://hadoop.apache.org/docs/r3.3.0/hadoop-MapReduce-client/hadoop-MapReduce-client-core/MapReduceTutorial.html)
-* [Spark文档Transformation](https://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations)
-* [HDFS Design文档](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html)
+* [Hadoop文档][1]
+* [Spark文档Transformation][2]
+* [HDFS Design文档][3]
+* [HDFS的HA机制][4]
+
+[1]: https://hadoop.apache.org/docs/r3.3.0/hadoop-MapReduce-client/hadoop-MapReduce-client-core/MapReduceTutorial.html
+[2]: https://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations
+[3]: https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html
+[4]: https://developer.ibm.com/zh/articles/os-cn-hadoop-name-node
+

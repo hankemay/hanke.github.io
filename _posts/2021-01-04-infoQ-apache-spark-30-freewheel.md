@@ -30,7 +30,7 @@ FreeWheel核心业务数据团队的主要工作是通过收集，分析来自�
 
 ### 数据建模和Data Pipelines架构
 当交易级别的广告（历史或者预测）数据进入系统后，会通过数据建模和Data Pipelines进行统一的建模或者分析，视业务需要更进一步构建数据集市，生成的聚合事实数据会被发布到数据仓库Hive和Clickhouse里供下游数据产品通过Presto或者Clickhouse查询引擎来消费。如下是整体建模和Data Pipelines的架构图：
-![Team Intro](/img/spark3/team-intro.png)
+![Team Intro](img/spark3/team-intro.png)
 
 其中主要模块包括：
 * **Optimus**  
@@ -56,18 +56,18 @@ FreeWheel核心业务数据团队的主要工作是通过收集，分析来自�
     * 由于数据输入源不一样，目前是分别两个pipelines在跑历史和预测数据，产生的表的数目也不太一样，因此做了分别的评估。  
 
 以历史数据上线后的端到端到运行时间为例（如下图），肉眼可见上线后整体pipeline的运行时间有了明显的下降，能够更快的输出数据供下游使用。  
-![runtime](/img/spark3/runtime.png)
+![runtime](img/spark3/runtime.png)
 
 ### 集群内存使用降低
 集群内存使用对于大batch达`降低30%`左右，每天平均`平均节省25%`左右。  
 以历史数据上线后的运行时集群的memory在ganglia上的截图为例（如下图），整体集群的内存使用从41.2T降到30.1T，这意味着我们可以用更少的机器花更少的钱来跑同样的Spark任务。  
-![memory](/img/spark3/spark-3-memory.png)
+![memory](img/spark3/spark-3-memory.png)
 
 ### AWS Cost降低
 Pipelines做了自动的Scale In/Scale Out策略: 在需要资源的时候扩集群的Task结点，在任务结束后自动去缩集群的Task结点，且会根据每次batch数据的大小通过算法学习得到最佳的机器数。通过升级到Spark 3.0后，由于现在任务跑的更快并且需要的机器更少，上线后统计AWS Cost每天`节省30%`左右，一年能为公司`百万成本`。  
 
 如下是历史数据Pipeline上线后，通过AWS Billing得到的账单Cost数据，可以看到在使用 Spot Instance 情况下(花费柱状图较短的情况下)从上线前(蓝色线)到上线后(红色线)每天有显著的30%左右的成本下降，如果使用AWS On Demand的Instance的话那么节省就更可观了。
-![aws-cost](/img/spark3/spark-3-aws-cost.jpg)
+![aws-cost](img/spark3/spark-3-aws-cost.jpg)
 
 ### 其他
 * Data Pipelines里的所有的相关模块都完成了Spark 3.0的升级，享受最新技术栈和优化带来的收益。
@@ -96,7 +96,7 @@ Spark `3.0.1`是社区目前推荐使用的最新的稳定版本，于2020年九
 
 * **升级HyperLogLog相关的UDAF到新接口**   
 Spark 3.0提供了通过用户定制实现的Aggregator来注册实现UDAF，可以避免对每一行的数据反复进行序列化和反序列化来进行聚合，而只需在整个分区里序列化一次 ，缓解了对cpu的压力，提升性能。假如一个DataFrame有100万行数据共10个paritions，那么旧的UDAF方式的序列化反序列化需要至少100万+10次(合并分区里的结果)。
-![UDAF](/img/spark3/UDAF.png)
+![UDAF](img/spark3/UDAF.png)
 而新的函数只需要10次即可，大大减少整体的序列化操作。
 
 
@@ -244,15 +244,15 @@ dfs.datanode.max.transfer.threads = 16384
 以Optimus数据建模里的一张表的运行情况为例：
 * 在reduce阶段从没有AQE的`40320`个tasks锐减到`4580`个tasks，减少了一个数量级。
     * 下图里下半部分是没有AQE的Spark 2.x的task情况，上半部分是打开AQE特性后的Spark 3.x的情况。
-![tasks](/img/spark3/spark-3-aqe-compare.png)
+![tasks](img/spark3/spark-3-aqe-compare.png)
 * 从更详细的运行时间图来看，`shuffler reader`后同样的aggregate的操作等时间也从`4.44h`到`2.56h`，节省将近一半。
     * 左边是spark 2.x的运行指标明细，右边是打开AQE后通过`custom shuffler reader`后的运行指标情况。
-![tasks](/img/spark3/spark-3-aqe-compare2.png)
+![tasks](img/spark3/spark-3-aqe-compare2.png)
 
 **原因分析**：
 * `AQE特性`:
     * [AQE][19]对于整体的Spark SQL的执行过程做了相应的调整和优化(如下图)，它最大的亮点是可以根据已经完成的计划结点`真实且精确的执行统计结果`来不停的`反馈并重新优化`剩下的执行计划。
-![AQE](/img/spark3/AQE.gif)
+![AQE](img/spark3/AQE.gif)
     * **AQE自动调整reducer的数量，减小partition数量**。Spark任务的并行度一直是让用户比较困扰的地方。如果并行度太大的话，会导致task过多，overhead比较大，整体拉慢任务的运行。而如果并行度太小的，数据分区会比较大，容易出现OOM的问题，并且资源也得不到合理的利用，并行运行任务优势得不到最大的发挥。而且由于Spark Context整个任务的并行度，需要一开始设定好且没法动态修改，这就很容易出现任务刚开始的时候数据量大需要大的并行度，而运行的过程中通过转化过滤可能最终的数据集已经变得很小，最初设定的分区数就显得过大了。  
 AQE能够很好的解决这个问题，在reducer去读取数据时，会根据用户设定的分区数据的大小(`spark.sql.adaptive.advisoryPartitionSizeInBytes`)来自动调整和合并(`Coalesce`)小的partition，自适应地减小partition的数量，以减少资源浪费和overhead，提升任务的性能。
 * 由上面单张表可以看到，打开AQE的时候极大的降低了task的数量，除了减轻了Driver的负担，也减少启动task带来的schedule，memory，启动管理等overhead，减少cpu的占用，提升的I/O性能。
