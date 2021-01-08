@@ -1,14 +1,14 @@
 {
-    "name": "hanke-blog",
-    "title": "Hanke's Blog",
+    "name": "data element",
+    "title": "Data Element",
     "author": "Hanke <hankemay@163.com",
     "version": "1.8.2",
-    "homepage": "https://hankemay.github.io",
+    "homepage": "https://dataelement.top",
     "repository": {
         "type": "git",
-        "url": "https://hankemay.github.io"
+        "url": "https://dataelement.top"
     },
-    "bugs": "https://hankemay.github.io/issues",
+    "bugs": "https://dataelement.top/issues",
     "devDependencies": {
         "grunt": "^1.1.0",
         "grunt-banner": "~0.2.3",

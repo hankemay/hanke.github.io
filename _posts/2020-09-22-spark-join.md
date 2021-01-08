@@ -57,4 +57,4 @@ This document will explain the DB join and spark join.
 
 -----
 
-Want to see something else added? <a href="https://hankemay.github.io">Open an issue.</a>
+Want to see something else added? <a href="https://dataelement.top">Open an issue.</a>
