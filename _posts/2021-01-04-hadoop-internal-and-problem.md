@@ -143,6 +143,11 @@ object WordCount {
 * [HDFS Design文档][3]
 * [HDFS的HA机制][4]
 
+<b><font color="red">本网站的文章除非特别声明，全部都是原创。
+原创文章版权归数据元素</font>(</b>[DataElement](https://www.dataelement.top)<b><font color="red">)所有，未经许可不得转载!</font></b>
+**了解更多大数据相关分享，可关注微信公众号"`数据元素`"**
+![数据元素微信公众号](/img/dataelement.gif)
+
 [1]: https://hadoop.apache.org/docs/r3.3.0/hadoop-MapReduce-client/hadoop-MapReduce-client-core/MapReduceTutorial.html
 [2]: https://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations
 [3]: https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html
