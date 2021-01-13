@@ -1,13 +1,12 @@
 ---
 layout: post
-title: "Hadoop内部机制和存在的问题"
-subtitle: "Hadoop到底有什么问题？"
+title: "Hadoop之MapReduce内部机制"
+subtitle: "MapReduce到底有什么问题？"
 date: 2021-01-04
 author: "Hanke"
 header-style: "text"
-tags: []
+tags: [Hadoop, MapReduce, BigData]
 ---
-# Map Reduce
 ## Map Reduce的过程详细解析
 ![Map-Reduce-process](/img/hadoop/Hadoop-MapReduce.png)
 ① : 每个数据的Split对应一个Map任务作为Map的输入，一般来说是HDFS的一个Block。  
@@ -15,7 +14,7 @@ tags: []
 ③ : 当Buffer满了以后, 会Spill溢出数据到磁盘里。在溢出之前会先按照Partition函数对数据进行分区(默认是取key的hash值然后根据Reducer的个数进行取模)，然后按照Key进行排序(快速排序)。如果设置了Combiner会在写入磁盘前，对数据进行Combine操作，通过减少key的数据量来减轻Reducer拉取数据的网络传输。  
 ④ : 最后将所有的溢出文件合并为一个文件，合并的过程中按照分区按照key进行排序（归并排序）, 如果溢出文件超过一定的数量（可配置)， 会在合并的前还会执行Combine操作（如果设置了Combiner）。  
 ⑤ : 当Map端有任务完成后，Reducer端就会启动对应的fetch & copy线程去从Map端复制数据。  
-⑥ : 当Copy过来的数据内存中放不下后，会往磁盘写，写之前会先进行merge和sort操作（归并排序）， 最终会合并得到一份Reduce的输入数据。    
+⑥ : 当Copy过来的数据内存中放不下后，会往磁盘写，写之前会先进行merge和sort操作（归并排序），combiner操作，最终会合并得到一份Reduce的输入数据。    
 ⑦ : 当输入数据准备好后，进行Reduce操作。  
 ⑧ : 输出数据到指定的位置。  
 
@@ -127,29 +126,18 @@ object WordCount {
 * **通过将最终临时文件合并成一个文件，按PartitionId顺序存储来减少碎文件**
     * Shuffle产生的临时文件会按照`PartitionId`去排序，最终会按照PartiontionId的顺序将一个Map产生的所有文件合成一个文件，来减少碎文件。
 
+## 引申文档
+* [HDFS](/_posts/2021-01-11-hdfs-in-hadoop.md)
+* [YARN](/_posts/2021-01-11-yarn-in-hadoop.md)
 
-## HDFS
-### HDFS的架构与工作机制
-官方[HDFS设计文档][3]。
-### HDFS的HA
-讲解详细的一篇文章[HDFS的HA机制][4]
-
-## Yarn
-### Yarn的架构与工作机制
-
-### Reference
+## Reference
 * [Hadoop文档][1]
 * [Spark文档Transformation][2]
-* [HDFS Design文档][3]
-* [HDFS的HA机制][4]
 
-<b><font color="red">本网站的文章除非特别声明，全部都是原创。
-原创文章版权归数据元素</font>(</b>[DataElement](https://www.dataelement.top)<b><font color="red">)所有，未经许可不得转载!</font></b>
+<b><font color="red">本网站的文章除非特别声明，全部都是原创。原创文章版权归数据元素</font>(</b>[DataElement](https://www.dataelement.top)<b><font color="red">)所有，未经许可不得转载!</font></b>
 **了解更多大数据相关分享，可关注微信公众号"`数据元素`"**
 ![数据元素微信公众号](/img/dataelement.gif)
 
 [1]: https://hadoop.apache.org/docs/r3.3.0/hadoop-MapReduce-client/hadoop-MapReduce-client-core/MapReduceTutorial.html
 [2]: https://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations
-[3]: https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html
-[4]: https://developer.ibm.com/zh/articles/os-cn-hadoop-name-node
 
