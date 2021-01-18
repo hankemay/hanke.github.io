@@ -7,6 +7,8 @@ author: "Hanke"
 header-style: "text"
 tags: [Hadoop, MapReduce, BigData]
 ---
+> 作为Hadoop里重要的分布式计算组件MapReduce到底存在什么样的问题，大家纷纷都转投其他技术栈？我们来一起探个究竟。本文会先详细解析一下整个MapReduce的过程，编程方式，然后再去分析一下存在的问题和其中可以借鉴的点。
+
 ## Map Reduce的过程详细解析
 ![Map-Reduce-process](/img/hadoop/Hadoop-MapReduce.png)
 ① : 每个数据的Split对应一个Map任务作为Map的输入，一般来说是HDFS的一个Block。  
