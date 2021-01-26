@@ -7,12 +7,12 @@ author: "Hanke"
 header-style: "text"
 tags: [Hadoop, HDFS, BigData]
 ---
+在前一篇"Hadoop的MapReduce到底有什么问题"里，我们一起回顾了MapReduce内部机制和存在的问题。在本文中，主要讨论Hadoop里另外一个重要组件HDFS的架构和高可用相关机制。感兴趣的同学也可进一步阅读官方[HDFS设计文档][1]。
+
 HDFS设计的目的就是分布式环境下海量数据的存储。其中最重要的目标就是：
 * 系统的高可用
 * 数据一致性
 * 高并发  
-
-本文主要介绍HDFS的架构和高可用相关机制。也可进一步阅读官方[HDFS设计文档][1]。   
 
 ## HDFS的架构与工作机制
 HDFS的架构图如下:   
@@ -38,7 +38,6 @@ HDFS主要由Namenode和DataNodes组成:
 * **文件数据方面**
     * 数据通过`replicas`冗余来保证HA。
 
-![HDFS-HA](/img/hadoop/HDFS_HA.png)
 
 更详细的信息可以参考文章[HDFS的HA机制][2]。
 
@@ -50,7 +49,7 @@ HDFS主要由Namenode和DataNodes组成:
 * **临时结点**: `/hadoop-ha/${dfs.nameservices}/ActiveStandbyElectorLock` 
     * 如果ZK在一定的时间内收到不到对应的NameNode的心跳，会将这个临时结点删掉。
 * **持久结点**: `/hadoop-ha/${dfs.nameservices}/ActiveBreadCrumb`  
-    * 持久结点会在成为主结点是同时创建。建立持久结点的目的是为了NameNode和ZK之间通信假死带来脑裂问题。持久结点里会记录NameNod的地址。当发生脑裂时，下一个被选为主结点的NameNode会去查看是不是存在持久结点，如果存在，就会采取Fencing的措施，来防止脑裂问题。具体的Fencing方法有:
+    * 持久结点会在成为主结点是同时创建。建立持久结点的目的是为了NameNode和ZK之间通信假死带来脑裂问题。持久结点里会记录NameNode的地址。当发生脑裂时，下一个被选为主结点的NameNode会去查看是不是存在持久结点，如果存在，就会采取Fencing的措施，来防止脑裂问题。具体的Fencing方法有:
         * 通过调用旧的Active NameNode的HAServiceProtocolRPC来去transition旧的NameNode为StandBy状态。
         * 通过SSH方式登录到对应的NameNode机器上Kill掉对应的进程。
         * 执行用户自定义的Shell脚本去隔离进程。
@@ -64,7 +63,8 @@ NameNode的自动主备切换主要由`ZKFailoverController`, `HealthMontior`和
 * `HealthMonitor`主要是用来监控NameNode的健康状态，如果检测到有状态变化，会调用回调函数来通知ZKFailoverController进行自动的主备选举。
 * `ActiveStandbyElector`主要是负责和ZK交互, 里面封装了ZK相关的处理逻辑，当ZK master选举完成，会回调ZKFailoverController的相应方法来进行NameNode的主备状态切换。
 
-具体的主备切换流程如下(可参考上面的HA图):
+具体的主备切换流程如下(可参考下面的HA图):
+![HDFS-HA](/img/hadoop/HDFS_HA.png)
 * **Active NameNode**  
 ① Active NameNode上的HealthMonitor发现NameNode上状态发生变化，比如没有响应。  
 ② 通过回调ZKFailoverController函数通知。  
@@ -74,14 +74,14 @@ NameNode的自动主备切换主要由`ZKFailoverController`, `HealthMontior`和
 ⑥ ZKFailoverController会去将Active NameNode的状态切换为Standby。  
 
 * **Standby NameNode**  
-① Standyb NameNode在第一次主备竞选时在ZK建立锁结点失败时会注册Watch监听。  
+① Standby NameNode在第一次主备竞选时在ZK建立锁结点失败时会注册Watch监听。  
 ② 当Active NameNode进行主备切换删除锁结点，NodeDelete的事件触发Standby NameNode的ActiveStandByElector的自动创建锁结点，申请成为主结点的动作。  
 ③ 当申请主结点被ZK通过后，会回调ZKFailoverController进行NameNode的状态切换。  
 ④ ZKFailoverController调NameNode方法将状态从Standby更新为Active。  
 ⑤ NameNode从Journal集群里Sync最新元数据EditLog信息。  
 ⑥ 当所有的元数据信息整体对齐后，此时的NameNode才会真正对外提供服务。  
 
-以上是正常情况下的主备切换流程。当Active NameNode整个机器宕机或者，和ZK失去通信后，根据ZK临时节点的特性，锁节点也会自动删除，自动触发主备切换。
+以上是正常情况下的主备切换流程。当Active NameNode整个机器宕机，或者和ZK失去通信后，根据ZK临时节点的特性，锁节点也会自动删除，自动触发主备切换。
 
 #### 脑裂和Fencing
 Zookeeper的工程实践里会经常出现“假死”的情况，即客户端到服务端的心跳不能正常发出，通讯出现问题。这样当超时超过设置的Session Timeout参数时，Zookeeper就会认为客户端已经挂掉了，会自动关闭session，删除锁节点，从而引发分布式系统里的双主或者脑裂的情况。比如HDFS里，会触发自动的主备切换，而实际上原来的Active NameNode还是好的，这样就存在两个Active NameNode在工作。
@@ -91,10 +91,10 @@ HDFS HA里解决脑裂问题就是在ZK里建立持久结点通过Fencing机制�
 
 ### Journal共享存储元数据
 * Active NameNode向Journal集群结点同步写EditLog元数据，具体可参考[元数据的高并发修改](#元数据的高并发修改)部分。
-* 而Stand By NameNode则是定时从Journal集群同步EditLog元数据到本地。
+* 而Standby NameNode则是定时从Journal集群同步EditLog元数据到本地。
 * 在发生NameNode主备切换的时候，需要将Standby的NameNode的元数据同Journal集群结点的信息完全对齐后才可对外提供数据。
 
-> Journal也是分布集群来通过Paxos算法来提供分布式数据一致性的保障。只有多数据结点通过投票以后才认为真正的数据写成功。
+> Journal本身也是分布集群来通过Paxos算法来提供分布式数据一致性的保障。只有多数据结点通过投票以后才认为真正的数据写成功。
 
 ### 元数据保护
 * 可以通过维护多份FSImage(落盘) + EditLog 副本来防止元数据损坏。
@@ -121,7 +121,7 @@ HDFS会对写入的所有数据计算校验和（checksum），并在读取数�
 参考[博文](https://juejin.cn/post/6844903713966915598)
 
 **主要的过程**:  
-当有多个线程排除申请修改元数据是，会需要经过两阶段的对元数据资源申请加锁的过程。
+当有多个线程排除申请修改元数据时，会需要经过两阶段的对元数据资源申请加锁的过程。
 * 第一次申请锁成功的线程，会首先生成`全局唯一且递增`的txid来作为这次元数据的标识，将元数据修改的信息（EditLog的transaction信息）写入到当下其中一个Buffer里（没有担任刷数据到磁盘的角色的Buffer里）。然后第一次快速释放锁。
 * 此时前一步中的线程接着发起第二次加锁请求:
     * 如果请求失败（比如现在正在有其他的线程正在写Buffer）会将自己休眠1s然后再发起新的加锁请求。
