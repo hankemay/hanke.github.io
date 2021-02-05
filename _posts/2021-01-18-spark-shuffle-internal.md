@@ -142,7 +142,7 @@ Spark Shuffle共包括两部分:
 **数据结构`PartitionedPairBuffer`**
 * 实现
     * 底层是特殊array。
-    * 一条record会占用array里两个相临空间，第一元素是`partitionId+record key`,第二元素是record`value`
+    * 一条record会占用array里两个相临空间，第一元素是`partitionId+record key`,第二元素是record`value`。
     * **扩容**时将底层数组再扩大一倍，然后对数组里的数据copy到新的空间里。
     * **局部排序**直接将数组里的数据然后按照对应的partitionId或者partitionId+key进行线性数组排序。
     * **全局排序**再将spill的数据和内存里的数据进行全局排序和merge时，通过建立最小堆或者最大堆进行全局归并排序合并操作即可。
