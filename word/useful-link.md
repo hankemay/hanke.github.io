@@ -5,6 +5,7 @@ markdown转微信: https://www.mdnice.com/
 ① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩
 ⑪ ⑫ ⑬ ⑭ ⑮ ⑯ ⑰ ⑱ ⑲ ⑳
 
+Markdown to doc: pandoc text.md -o text.docx
 
 vim复制文章到粘贴板
 ggVG全选中，然后:w !pbcopy
