@@ -107,6 +107,7 @@ Spark Shuffle Read阶段主要解决的是从上游Map产生的数据里拉取�
 [Spark Shuffle 内部机制（一)][1]
 
 [1]:https://dataelement.top/2021/02/03/spark-shuffle-internal-part-i
+[2]:https://dataelement.top/2021/02/05/spark-shuffle-internal-part-ii
 
 
 <b><font color="red">本网站的文章除非特别声明，全部都是原创。

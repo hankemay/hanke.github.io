@@ -40,7 +40,7 @@ Spark Shuffle共包括两部分:
 如上图所示，根据Write阶段不同的数据处理需求，Spark进行不同的流程选择和数据结构设计来解决计算需求、内存压力和性能问题。接下来会进行每个场景详细的分解介绍。
 
 #### 1) 仅需要map，不需要combine和sort的场景
-![Onlymap-Shuflle-Write](/img/spark/shuffle/Onlymap_ShuffleWrite.png)
+![Onlymap-Shuflle-Write](/img/spark/shuffle/OnlyMap_ShuffleWrite.png)
 
 **过程**  
 对于输入的record，经过map运算后，会输出record对应的partitionId和map后的数据直接放到内存里其对应分区的buffer里，当buffer数据满了以后会直接flush到磁盘上对应的分区文件里。因此一个map task的每个分区对应一个buffer和磁盘上的一个文件。
