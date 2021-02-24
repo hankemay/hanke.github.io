@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "AWS EMR在FreeWheel的应用与实践"
+title: "AWS EMR 在搭建大数据平台 ETL 中的应用实践"
 subtitle: "最佳实践"
 date: 2021-02-22
 author: "pkexcellent"
